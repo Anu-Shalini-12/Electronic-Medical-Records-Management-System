@@ -1,0 +1,71 @@
+//EMRRecord.java
+
+package EMRSystem;
+
+import com.owlike.genson.annotation.JsonProperty;
+import org.hyperledger.fabric.contract.annotation.DataType;
+import org.hyperledger.fabric.contract.annotation.Property;
+import java.util.Objects;
+
+@DataType()
+public final class EMRRecord {
+
+    @Property()
+    private final String patientId;
+
+    @Property()
+    private final String name;
+
+    @Property()
+    private final String diagnosis;
+
+    @Property()
+    private final String treatment;
+
+    @Property()
+    private final String dateOfVisit;
+
+    public String getPatientId() { return patientId; }
+    public String getName() { return name; }
+    public String getDiagnosis() { return diagnosis; }
+    public String getTreatment() { return treatment; }
+    public String getDateOfVisit() { return dateOfVisit; }
+
+    public EMRRecord(
+        @JsonProperty("patientId") final String patientId,
+        @JsonProperty("name") final String name,
+        @JsonProperty("diagnosis") final String diagnosis,
+        @JsonProperty("treatment") final String treatment,
+        @JsonProperty("dateOfVisit") final String dateOfVisit
+    ) {
+        this.patientId = patientId;
+        this.name = name;
+        this.diagnosis = diagnosis;
+        this.treatment = treatment;
+        this.dateOfVisit = dateOfVisit;
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
+        if (this == obj) return true;
+        if ((obj == null) || (getClass() != obj.getClass())) return false;
+
+        EMRRecord other = (EMRRecord) obj;
+        return Objects.deepEquals(
+            new String[]{patientId, name, diagnosis, treatment, dateOfVisit},
+            new String[]{other.patientId, other.name, other.diagnosis, other.treatment, other.dateOfVisit}
+        );
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(patientId, name, diagnosis, treatment, dateOfVisit);
+    }
+
+    @Override
+    public String toString() {
+        return this.getClass().getSimpleName() + "@" + Integer.toHexString(hashCode()) +
+               " [patientId=" + patientId + ", name=" + name + ", diagnosis=" + diagnosis +
+               ", treatment=" + treatment + ", dateOfVisit=" + dateOfVisit + "]";
+    }
+}

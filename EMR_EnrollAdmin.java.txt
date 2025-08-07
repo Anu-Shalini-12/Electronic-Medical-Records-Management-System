@@ -1,0 +1,56 @@
+//EnrollAdmin.java
+
+package emrclient;
+
+import java.nio.file.Paths;
+import java.util.Properties;
+
+import org.hyperledger.fabric.gateway.Wallet;
+import org.hyperledger.fabric.gateway.Wallets;
+import org.hyperledger.fabric.gateway.Identities;
+import org.hyperledger.fabric.gateway.Identity;
+
+import org.hyperledger.fabric.sdk.Enrollment;
+import org.hyperledger.fabric.sdk.security.CryptoSuite;
+import org.hyperledger.fabric.sdk.security.CryptoSuiteFactory;
+
+import org.hyperledger.fabric_ca.sdk.EnrollmentRequest;
+import org.hyperledger.fabric_ca.sdk.HFCAClient;
+
+public class EnrollAdmin {
+
+    static {
+        // This is required when running locally (e.g., Fabric on Docker using localhost)
+        System.setProperty("org.hyperledger.fabric.sdk.service_discovery.as_localhost", "true");
+    }
+
+    public static void main(String[] args) throws Exception {
+        // Load the CA certificate and create HFCAClient
+        Properties props = new Properties();
+        props.put("pemFile", "/home/labuser/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/ca/ca.org1.example.com-cert.pem");
+        props.put("allowAllHostNames", "true");
+
+        HFCAClient caClient = HFCAClient.createNewInstance("https://localhost:7054", props);
+        caClient.setCryptoSuite(CryptoSuiteFactory.getDefault().getCryptoSuite());
+
+        // Create wallet
+        Wallet wallet = Wallets.newFileSystemWallet(Paths.get("wallet"));
+
+        // Check if admin is already enrolled
+        if (wallet.get("admin") != null) {
+            System.out.println("An identity for the admin user \"admin\" already exists in the wallet");
+            return;
+        }
+
+        // Enroll the admin
+        EnrollmentRequest req = new EnrollmentRequest();
+        req.addHost("localhost");
+        req.setProfile("tls");
+
+        Enrollment enrollment = caClient.enroll("admin", "adminpw", req);
+        Identity adminIdentity = Identities.newX509Identity("Org1MSP", enrollment);
+
+        wallet.put("admin", adminIdentity);
+        System.out.println("Successfully enrolled admin and imported into wallet");
+    }
+}

@@ -1,0 +1,63 @@
+//ClientApp.java
+
+package emrclient;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+import org.hyperledger.fabric.gateway.Contract;
+import org.hyperledger.fabric.gateway.Gateway;
+import org.hyperledger.fabric.gateway.Network;
+import org.hyperledger.fabric.gateway.Wallet;
+import org.hyperledger.fabric.gateway.Wallets;
+
+public class ClientApp {
+
+    public static void main(String[] args) throws Exception {
+        // Set the system property for service discovery
+        System.setProperty("org.hyperledger.fabric.sdk.service_discovery.as_localhost", "true");
+
+        // Load the wallet from filesystem
+        Path walletPath = Paths.get("wallet");
+        Wallet wallet = Wallets.newFileSystemWallet(walletPath);
+
+        // Load the network connection configuration
+        Path networkConfigPath = Paths.get("..", "..", "fabric-samples", "test-network", "organizations", "peerOrganizations", "org1.example.com", "connection-org1.yaml");
+
+        // Connect to the gateway
+        Gateway.Builder builder = Gateway.createBuilder();
+        builder.identity(wallet, "appUser").networkConfig(networkConfigPath).discovery(true);
+
+        try (Gateway gateway = builder.connect()) {
+            // Access the channel and contract
+            Network network = gateway.getNetwork("mychannel");
+            Contract contract = network.getContract("EMRSystem");
+
+            // Step 1: Initialize the ledger
+            System.out.println("\n--- Initializing Ledger ---");
+            contract.submitTransaction("initLedger");
+            System.out.println("Ledger initialized successfully.");
+
+            // Step 2: Create a new medical record for P003
+            System.out.println("\n--- Creating New Record (P003) ---");
+            contract.submitTransaction("createRecord", "P003", "Alice", "Fever", "Paracetamol", "2025-05-19");
+            System.out.println("Record P003 created successfully.");
+
+            // Step 3: Read the medical record for P003
+            System.out.println("\n--- Reading Record (P003) ---");
+            byte[] result = contract.evaluateTransaction("readRecord", "P003");
+            System.out.println("Record Details: " + new String(result));
+
+            // Step 4: Update the medical record for P003
+            System.out.println("\n--- Updating Record (P003) ---");
+            contract.submitTransaction("updateRecord", "P003", "Alice", "Recovered", "None", "2025-05-20");
+            System.out.println("Record P003 updated successfully.");
+
+            // Step 5: Read the updated record for P003
+            System.out.println("\n--- Reading Updated Record (P003) ---");
+            result = contract.evaluateTransaction("readRecord", "P003");
+            System.out.println("Updated Record Details: " + new String(result));
+        }
+    }
+}
+

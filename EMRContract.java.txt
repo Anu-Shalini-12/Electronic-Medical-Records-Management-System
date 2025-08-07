@@ -1,0 +1,73 @@
+//EMRContract.java
+
+package EMRSystem;
+
+import org.hyperledger.fabric.contract.Context;
+import org.hyperledger.fabric.contract.ContractInterface;
+import org.hyperledger.fabric.contract.annotation.*;
+import org.hyperledger.fabric.shim.ChaincodeException;
+import org.hyperledger.fabric.shim.ChaincodeStub;
+import com.owlike.genson.Genson;
+
+@Contract(name = "EMRSystem", info = @Info(
+        title = "EMR Smart Contract",
+        description = "Smart contract for managing Electronic Medical Records",
+        version = "0.0.1"))
+@Default
+public final class EMRContract implements ContractInterface {
+
+    private final Genson genson = new Genson();
+
+    private enum EMRErrors {
+        RECORD_NOT_FOUND,
+        RECORD_ALREADY_EXISTS
+    }
+
+    @Transaction()
+    public void initLedger(final Context ctx) {
+        ChaincodeStub stub = ctx.getStub();
+        EMRRecord record = new EMRRecord("P001", "Alice", "Fever", "Paracetamol", "2025-05-19");
+        stub.putStringState("P001", genson.serialize(record));
+    }
+
+    @Transaction()
+    public EMRRecord createRecord(final Context ctx, final String patientId, final String name,
+                                  final String diagnosis, final String treatment, final String dateOfVisit) {
+        ChaincodeStub stub = ctx.getStub();
+        if (!stub.getStringState(patientId).isEmpty()) {
+            throw new ChaincodeException("Record " + patientId + " already exists",
+                    EMRErrors.RECORD_ALREADY_EXISTS.toString());
+        }
+
+        EMRRecord record = new EMRRecord(patientId, name, diagnosis, treatment, dateOfVisit);
+        stub.putStringState(patientId, genson.serialize(record));
+        return record;
+    }
+
+    @Transaction()
+    public EMRRecord readRecord(final Context ctx, final String patientId) {
+        ChaincodeStub stub = ctx.getStub();
+        String state = stub.getStringState(patientId);
+        if (state.isEmpty()) {
+            throw new ChaincodeException("Record " + patientId + " not found",
+                    EMRErrors.RECORD_NOT_FOUND.toString());
+        }
+        return genson.deserialize(state, EMRRecord.class);
+    }
+
+    @Transaction()
+    public EMRRecord updateRecord(final Context ctx, final String patientId,
+                                  final String name, final String diagnosis,
+                                  final String treatment, final String dateOfVisit) {
+        ChaincodeStub stub = ctx.getStub();
+        String existing = stub.getStringState(patientId);
+        if (existing.isEmpty()) {
+            throw new ChaincodeException("Record " + patientId + " does not exist",
+                    EMRErrors.RECORD_NOT_FOUND.toString());
+        }
+
+        EMRRecord updated = new EMRRecord(patientId, name, diagnosis, treatment, dateOfVisit);
+        stub.putStringState(patientId, genson.serialize(updated));
+        return updated;
+    }
+}
